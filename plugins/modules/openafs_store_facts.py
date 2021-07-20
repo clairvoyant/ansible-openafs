@@ -66,6 +66,15 @@ def setup_logging():
     log.addHandler(handler)
     log.setLevel(level)
 
+def update(facts, key, value):
+    if key not in facts:
+        facts[key] = value
+    elif isinstance(facts[key], dict) and isinstance(value, dict):
+        facts[key].update(value)
+    elif isinstance(facts[key], list) and isinstance(value, list):
+        facts[key].append(value)
+    else:
+       facts[key] = value
 
 def main():
     setup_logging()
@@ -92,23 +101,11 @@ def main():
     except Exception:
         facts = {}
 
-    # TODO: Making this idempotent has proved challenging. Even using
-    #       OrderedDicts() and writing a temp file has shown keys can
-    #       be shuffled around. For now, keep it simple and just write
-    #       the facts dict to the file each time.
-
     for key, value in module.params['facts'].items():
         if state == 'set':
             facts[key] = value
         elif state == 'update':
-            if key not in facts:
-                facts[key] = value
-            elif isinstance(facts[key], dict) and isinstance(value, dict):
-                facts[key].update(value)
-            elif isinstance(facts[key], list) and isinstance(value, list):
-                facts[key].append(value)
-            else:
-                facts[key] = value
+            update(facts, key, value)
         else:
             module.fail_json(msg='Internal error: unknown state %s' % state)
 
