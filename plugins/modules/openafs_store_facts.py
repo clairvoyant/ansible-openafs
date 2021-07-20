@@ -67,14 +67,19 @@ def setup_logging():
     log.setLevel(level)
 
 def update(facts, key, value):
+    changed = False
     if key not in facts:
         facts[key] = value
+        changed = True
     elif isinstance(facts[key], dict) and isinstance(value, dict):
-        facts[key].update(value)
+        changed = update(facts[key], key, value)
     elif isinstance(facts[key], list) and isinstance(value, list):
         facts[key].append(value)
+        changed = True
     else:
-       facts[key] = value
+        facts[key] = value
+        changed = True
+    return changed
 
 def main():
     setup_logging()
@@ -101,20 +106,23 @@ def main():
     except Exception:
         facts = {}
 
+    changed = False
     for key, value in module.params['facts'].items():
         if state == 'set':
             facts[key] = value
+            changed = True
         elif state == 'update':
-            update(facts, key, value)
+            changed = update(facts, key, value)
         else:
             module.fail_json(msg='Internal error: unknown state %s' % state)
 
-    if not os.path.exists(factsdir):
-        os.makedirs(factsdir)
-    with open(factsfile, 'w') as fp:
-        json.dump(facts, fp, indent=2)
-    log.info("Facts file '%s' changed.", factsfile)
-    results['changed'] = True
+    if changed:
+        if not os.path.exists(factsdir):
+            os.makedirs(factsdir)
+        with open(factsfile, 'w') as fp:
+            json.dump(facts, fp, indent=2)
+        log.info("Facts file '%s' changed.", factsfile)
+        results['changed'] = True
 
     # Update local facts in the current play.
     results['ansible_facts']['ansible_local']['openafs'] = facts
