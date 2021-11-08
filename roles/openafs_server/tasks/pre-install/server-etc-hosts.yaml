@@ -2,6 +2,21 @@
 # Some platforms, such as Debian based systems, add a loopback address for the
 # hostname as a fallback when dns is unavailable. For now, fixup the /etc/hosts
 # file by replacing the loopback address with the actual ipv4 address.
+
+
+- name: Check hostname resolution.
+  openafs_contrib.openafs.openafs_gethostbyname_check:
+    enable_change_hosts_file: true
+    netinfo: "{{ afs_server_netinfo | d(omit) }}"
+    netrestrict: "{{ afs_server_netrestrict | d(omit) }}"
+  register: check_results
+
+- debug:
+    var: check_results
+
+- fail:
+    msg: breakpoint
+
 - name: Avoid resolving the hostname to a loopback address
   become: yes
   when: ansible_system == 'Linux'

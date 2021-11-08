@@ -1,10 +1,18 @@
 ---
-- name: Configure hosts file
+- name: Preamble
   hosts: all
+  vars:
+     afs_prep_rewrite_etc_hosts: "{{ lookup('env', 'AFS_PREP_REWRITE_ETC_HOSTS') | d('yes', true) | bool }}"
+     afs_prep_selinux_mode: "{{ lookup('env', 'AFS_PREP_SELINUX_MODE') | d('permissive', true) }}"
   tasks:
-    - name: Configure /etc/hosts
+    - debug:
+        var: afs_prep_rewrite_etc_hosts
+
+    - name: Rewrite /etc/hosts
       become: yes
-      when: ansible_system == 'Linux'
+      when:
+        - afs_prep_rewrite_etc_hosts
+        - ansible_system == 'Linux'
       copy:
         backup: yes
         dest: /etc/hosts
@@ -14,13 +22,6 @@
           {% for name in hostvars | sort %}
           {{ hostvars[name].ansible_default_ipv4.address }}    {{ hostvars[name].ansible_hostname }}
           {% endfor %}
-
-- name: Setup selinux mode
-  hosts: all
-  tasks:
-    - set_fact:
-        afs_prep_selinux_mode: "{{ lookup('env', 'AFS_PREP_SELINUX_MODE') | d('permissive', true) }}"
-      when: afs_prep_selinux_mode is undefined
 
     - name: Configure selinux mode
       become: yes
